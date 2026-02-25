@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="manifest" href="/manifest.json">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#00c896">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Courtney's 75 Hard</title>
@@ -454,7 +461,8 @@
   </style>
 </head>
 <body>
-  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" style="right: 70px;">🌙</button>
+  <button class="theme-toggle" onclick="location.reload(true)" title="Force Refresh" style="right: 15px;">🔄</button>
   
   <div class="container">
     <div class="user-badge"><span>✨ Courtney's Journey</span></div>
@@ -648,21 +656,33 @@
     function getWeek() { return Math.ceil(getCurrentDay() / 7); }
     
     function loadData() {
+      // Feb 24, 2026 is Tuesday, not Monday
       const DAY1 = new Date('2026-02-24').toDateString(); // "Tue Feb 24 2026"
       let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || {
         completedDays: [], todayTasks: {}, waterBottles: {},
         books: [], measurements: [], reflections: {}, theme: 'dark'
       };
-      // Auto-complete Day 1 if not already done
+      
+      // Aggressive migration: remove wrong entries and ensure correct Day 1
+      const wrongDay1 = "Mon Feb 24 2026";
+      let needsSave = false;
+      
+      // Remove wrong day format if present
+      if (data.completedDays.includes(wrongDay1)) {
+        data.completedDays = data.completedDays.filter(d => d !== wrongDay1);
+        needsSave = true;
+      }
+      
+      // Always ensure Day 1 is marked complete
       if (!data.completedDays.includes(DAY1)) {
         data.completedDays.push(DAY1);
-        saveData(data);
+        needsSave = true;
       }
-      // Fix any old "Mon Feb 24 2026" entries
-      const wrongDay1 = "Mon Feb 24 2026";
-      if (data.completedDays.includes(wrongDay1) && !data.completedDays.includes(DAY1)) {
-        data.completedDays = data.completedDays.map(d => d === wrongDay1 ? DAY1 : d);
-        saveData(data);
+      
+      if (needsSave) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        // Don't call saveData here to avoid recursion, but sync
+        syncToPartner(data);
       }
       return data;
     }
